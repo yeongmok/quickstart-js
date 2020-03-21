@@ -8,12 +8,13 @@
  */
 const https = require('https');
 var fs = require('fs');
-var {google} = require('googleapis');
-var PROJECT_ID = '<YOUR-PROJECT-ID>';
+
 var HOST = 'fcm.googleapis.com';
-var PATH = '/v1/projects/' + PROJECT_ID + '/messages:send';
 var MESSAGING_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
 var SCOPES = [MESSAGING_SCOPE];
+
+const GoogleApis = require('googleapis').GoogleApis;
+const google = new GoogleApis();
 
 /**
  * Get a valid access token.
@@ -21,7 +22,7 @@ var SCOPES = [MESSAGING_SCOPE];
 // [START retrieve_access_token]
 function getAccessToken() {
   return new Promise(function(resolve, reject) {
-    var key = require('./service-account.json');
+    var key = FIREBASE_ADMIN_KEY;
     var jwtClient = new google.auth.JWT(
       key.client_email,
       null,
@@ -69,6 +70,7 @@ function sendFcmMessage(fcmMessage) {
     request.on('error', function(err) {
       console.log('Unable to send message to Firebase');
       console.log(err);
+
     });
 
     request.write(JSON.stringify(fcmMessage));
@@ -110,31 +112,70 @@ function buildOverrideMessage() {
  * common parts of a notification message that will be sent
  * to any app instance subscribed to the news topic.
  */
-function buildCommonMessage() {
-  return {
-    'message': {
-      'topic': 'news',
-      'notification': {
-        'title': 'FCM Notification',
-        'body': 'Notification from FCM'
+function buildMessage(deviceToken) {
+  const title = 'Title FCM Notification';
+  const body = 'Notification from FCM ' + new Date().getTime();
+  const dataMsg = {
+    message: {
+      token : deviceToken,
+      data: {
+        title,
+        body,
+      },
+      android: {
+        data: {
+          title,
+          body,
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            alert: {
+              title,
+              body,
+            },
+            sound: 'default',
+          }
+        }
       }
     }
   };
+
+  return dataMsg;
 }
 
-var message = process.argv[2];
-if (message && message == 'common-message') {
-  var commonMessage = buildCommonMessage();
-  console.log('FCM request body for message using common notification object:');
-  console.log(JSON.stringify(commonMessage, null, 2));
-  sendFcmMessage(buildCommonMessage());
-} else if (message && message == 'override-message') {
-  var overrideMessage = buildOverrideMessage();
-  console.log('FCM request body for override message:');
-  console.log(JSON.stringify(overrideMessage, null, 2));
-  sendFcmMessage(buildOverrideMessage());
-} else {
-  console.log('Invalid command. Please use one of the following:\n'
-      + 'node index.js common-message\n'
-      + 'node index.js override-message');
+var env = process.argv[2];
+if (env !== 'staging' && env !== 'production') {
+  console.error('Invalid env argument. it must be "staging" or "production", but it is ' + env);
+  process.exit(1);
 }
+
+var deviceToken = process.argv[3];
+if (!deviceToken) {
+  console.error('deviceToken should be input');
+  process.exit(1);
+}
+
+var FIREBASE_ADMIN_KEY;
+var PROJECT_ID;
+var fcmAuthPath;
+if (env === 'staging') {
+  PROJECT_ID = 'miso-mobile-staging';
+  fcmAuthPath = './miso-mobile-firebase-adminsdk-staging.json';
+} else if (env === 'production') {
+  PROJECT_ID = 'miso-mobile';
+  fcmAuthPath = './miso-mobile-firebase-adminsdk.json';
+}
+FIREBASE_ADMIN_KEY = require(fcmAuthPath);
+
+var PATH = '/v1/projects/' + PROJECT_ID + '/messages:send';
+
+console.log(fcmAuthPath);
+// ios
+// 'fuwoS8r5Muc:APA91bGWN5uDe4jrNuyFU-RWPwVs42PXN2uBoY60vR1EF9Op3C7me2Bcacw3gbhTs6L2BlYDtXqdjzaluLwwyof-wigtvxsTLZewQAr8VBGfMOGXS0_3CnA8avMy47E_JIgPIE7J4s4W';
+
+// android 
+// 'e5-oRaSzPRo:APA91bGcADZgi1J6MeFx3ElxaGsjev32qy2DEh6X9O-cdDuGqBUbl_mSt4WGkaPyNrgK6VCUMRhrkzMZFXQqAwikzoLqHLnM_rmOSFH4_0a-8UagxBgPId3fISRVtjupwPsfIFyclVpH'
+sendFcmMessage(buildMessage(deviceToken));
+
