@@ -122,60 +122,43 @@ function buildMessage(deviceToken) {
         title,
         body,
       },
-      android: {
-        data: {
-          title,
-          body,
-        },
-      },
-      apns: {
-        payload: {
-          aps: {
-            alert: {
-              title,
-              body,
-            },
-            sound: 'default',
-          }
-        }
-      }
+      // android: {
+      //   data: {
+      //     title,
+      //     body,
+      //   },
+      // },
+      // apns: {
+      //   payload: {
+      //     aps: {
+      //       alert: {
+      //         title,
+      //         body,
+      //       },
+      //       sound: 'default',
+      //     }
+      //   }
+      // }
     }
-  };
+  }
 
   return dataMsg;
 }
 
-var env = process.argv[2];
-if (env !== 'staging' && env !== 'production') {
-  console.error('Invalid env argument. it must be "staging" or "production", but it is ' + env);
-  process.exit(1);
-}
-
-var deviceToken = process.argv[3];
+var deviceToken = process.argv[2];
 if (!deviceToken) {
   console.error('deviceToken should be input');
   process.exit(1);
 }
 
 var FIREBASE_ADMIN_KEY;
-var PROJECT_ID;
-var fcmAuthPath;
-if (env === 'staging') {
-  PROJECT_ID = 'miso-mobile-staging';
-  fcmAuthPath = './miso-mobile-firebase-adminsdk-staging.json';
-} else if (env === 'production') {
-  PROJECT_ID = 'miso-mobile';
-  fcmAuthPath = './miso-mobile-firebase-adminsdk.json';
-}
+var PROJECT_ID = 'miso-mobile';
+var fcmAuthPath = './miso-mobile-firebase-adminsdk.json';
+
 FIREBASE_ADMIN_KEY = require(fcmAuthPath);
 
 var PATH = '/v1/projects/' + PROJECT_ID + '/messages:send';
 
 console.log(fcmAuthPath);
-// ios
-// 'fuwoS8r5Muc:APA91bGWN5uDe4jrNuyFU-RWPwVs42PXN2uBoY60vR1EF9Op3C7me2Bcacw3gbhTs6L2BlYDtXqdjzaluLwwyof-wigtvxsTLZewQAr8VBGfMOGXS0_3CnA8avMy47E_JIgPIE7J4s4W';
-
-// android 
-// 'e5-oRaSzPRo:APA91bGcADZgi1J6MeFx3ElxaGsjev32qy2DEh6X9O-cdDuGqBUbl_mSt4WGkaPyNrgK6VCUMRhrkzMZFXQqAwikzoLqHLnM_rmOSFH4_0a-8UagxBgPId3fISRVtjupwPsfIFyclVpH'
 sendFcmMessage(buildMessage(deviceToken));
 
